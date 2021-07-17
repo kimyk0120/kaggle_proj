@@ -647,3 +647,5 @@ MigrationBackup/
 FodyWeavers.xsd
 
 .idea/
+
+test/
