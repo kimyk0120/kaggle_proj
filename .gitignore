@@ -649,3 +649,6 @@ FodyWeavers.xsd
 .idea/
 
 test/
+
+data/
+/data/gan-getting-started/

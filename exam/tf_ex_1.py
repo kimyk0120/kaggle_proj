@@ -64,8 +64,10 @@ def imshow(image, title=None):
         plt.title(title)
 
 
-content_image = load_img(content_path)
+# content_image = load_img(content_path)
+content_image = load_img('../test/images/test3.jpeg')
 style_image = load_img(style_path)
+# style_image = load_img('../test/images/15.jpg')
 
 plt.subplot(1, 2, 1)
 imshow(content_image, 'Content Image')
@@ -73,7 +75,7 @@ imshow(content_image, 'Content Image')
 plt.subplot(1, 2, 2)
 imshow(style_image, 'Style Image')
 
-# plt.show()
+plt.show()
 
 
 # TF-Hub를 통한 빠른 스타일 전이
@@ -104,6 +106,8 @@ style_layers = ['block1_conv1',
                 'block3_conv1',
                 'block4_conv1',
                 'block5_conv1']
+
+
 
 num_content_layers = len(content_layers)
 num_style_layers = len(style_layers)
@@ -153,7 +157,7 @@ class StyleContentModel(tf.keras.models.Model):
         self.vgg.trainable = False
 
     def call(self, inputs):
-        "[0,1] 사이의 실수 값을 입력으로 받습니다"
+        """[0,1] 사이의 실수 값을 입력으로 받습니다"""
         inputs = inputs * 255.0
         preprocessed_input = tf.keras.applications.vgg19.preprocess_input(inputs)
         outputs = self.vgg(preprocessed_input)
@@ -194,6 +198,95 @@ for name, output in sorted(results['content'].items()):
     print("    최솟값: ", output.numpy().min())
     print("    최댓값: ", output.numpy().max())
     print("    평균: ", output.numpy().mean())
+
+
+
+style_targets = extractor(style_image)['style']
+content_targets = extractor(content_image)['content']
+
+image = tf.Variable(content_image)
+
+def clip_0_1(image):
+    return tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=1.0)
+
+
+opt = tf.optimizers.Adam(learning_rate=0.02, beta_1=0.99, epsilon=1e-1)
+
+style_weight = 1e-2
+content_weight = 1e4
+total_variation_weight = 30
+
+
+def high_pass_x_y(image):
+    x_var = image[:, :, 1:, :] - image[:, :, :-1, :]
+    y_var = image[:, 1:, :, :] - image[:, :-1, :, :]
+
+    return x_var, y_var
+
+
+def total_variation_loss(image):
+    x_deltas, y_deltas = high_pass_x_y(image)
+    return tf.reduce_sum(tf.abs(x_deltas)) + tf.reduce_sum(tf.abs(y_deltas))
+
+
+def style_content_loss(outputs):
+    style_outputs = outputs['style']
+    content_outputs = outputs['content']
+    style_loss = tf.add_n([tf.reduce_mean((style_outputs[name] - style_targets[name]) ** 2)
+                           for name in style_outputs.keys()])
+    style_loss *= style_weight / num_style_layers
+
+    content_loss = tf.add_n([tf.reduce_mean((content_outputs[name] - content_targets[name]) ** 2)
+                             for name in content_outputs.keys()])
+    content_loss *= content_weight / num_content_layers
+    loss = style_loss + content_loss
+    return loss
+
+
+@tf.function()
+def train_step(image):
+    with tf.GradientTape() as tape:
+        outputs = extractor(image)
+        loss = style_content_loss(outputs)
+        loss += total_variation_weight * tf.image.total_variation(image)
+
+    grad = tape.gradient(loss, image)
+    opt.apply_gradients([(grad, image)])
+    image.assign(clip_0_1(image))
+
+
+# train_step(image)
+# train_step(image)
+# train_step(image)
+
+import time
+
+start = time.time()
+
+epochs = 10
+steps_per_epoch = 100
+
+step = 0
+for n in range(epochs):
+    for m in range(steps_per_epoch):
+        step += 1
+        train_step(image)
+        print(".", end='')
+    # display.clear_output(wait=True)
+    plt.imshow(tensor_to_image(image))
+    plt.show()
+    print("훈련 스텝: {}".format(step))
+
+end = time.time()
+print("전체 소요 시간: {:.1f}".format(end - start))
+
+file_name = 'stylized-image.png'
+tensor_to_image(image).save(file_name)
+
+
+
+
+
 
 
 
