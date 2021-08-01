@@ -64,8 +64,8 @@ def imshow(image, title=None):
         plt.title(title)
 
 
-# content_image = load_img(content_path)
-content_image = load_img('../test/images/test3.jpeg')
+content_image = load_img(content_path)
+# content_image = load_img('../test/images/test3.jpeg')
 style_image = load_img(style_path)
 # style_image = load_img('../test/images/15.jpg')
 
