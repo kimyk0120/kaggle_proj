@@ -403,7 +403,7 @@ checkpoint_path = './checkpoint/cyclegan.ckpt'
 checkpoint = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
                                                 save_weights_only=True,
                                                 verbose=1)
-EPOCH = 2
+EPOCH = 1
 
 history = cycle_gan_model.fit(
     tf.data.Dataset.zip((monet_ds, photo_ds)),
